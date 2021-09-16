@@ -214,17 +214,6 @@ def get_fits_name(name_string):
   # Return the file name
   return(file_name)
 
-def get_img_names(image_paths):
-  '''
-  Input: Optional argument - a list of folder (telescope) names
-  Output: A dictionary of lists of all the image names from each folder
-  Description: Returns a dictionary of lists of all the image names from each folder
-  '''
-  image_names = []
-  for path in image_paths:
-    img_names.append(get_fits_name(path))
-  return(image_names)
-
 def get_images(image_paths):
   '''
   Input: A list of image file paths
@@ -337,7 +326,7 @@ def calc_image_paths(folder_names=['VLT','GEMINI','SUBARU']):
     img_paths[telescope] = get_image_paths(telescope)
   return(img_paths)
 
-def calc_mockup_images(mockup,img_paths):
+def process_images(mockup,img_paths):
   '''
   Input: The main mockup dictionary (imported from a csv), a dictionary of telescopes, and a dictionary of image file paths
   Output: The fits data arrays for the images in the mockup
@@ -360,12 +349,16 @@ def calc_mockup_images(mockup,img_paths):
           break
   return(mockup_images)
 
-def calc_scale_bar_pixels(mockup):
+def scale_bar(mockup):
   '''
   Input: The main mockup dictionary (imported from a csv)
   Output: A dictionary with image name keys and scale bar length values
   Description: Calculates the length in pixels of scale bars on the mockup
   '''
+  # Define a dictionary of plate scales for the three telescopes
+  plate_scale = {'VLT':12.255,'GEMINI':14.14,'SUBARU':9.5}
+  # Define a dictionary keying each mockup image to its telescope
+  telescopes = calc_telescopes(mockup)
   # Calculate distance to the object and the distance per pixel using the plate scale
   dist_dict = {}
   dist_per_pixel = {}
@@ -407,7 +400,7 @@ def calc_snip_med(mockup,mockup_images):
         if np.isnan(snip_med[image_name]): snip_med[image_name] = 0
   return(snip_med)
 
-def recalc_mockup_images(mockup,mockup_images):
+def reprocess_images(mockup,mockup_images):
   '''
   Input: The main mockup dictionary (imported from a csv) and a dictionary of mockup images
   Output: A dictionary of mockup images with median subtracted backgrounds
@@ -431,7 +424,7 @@ def make_new_savepath():
   os.mkdir(save_path)
   return(save_path)
 
-def plot_mockup(colormap,norm_alpha,dimensions,save_to_drive=False,save_path='null'):
+def plot_mockup(mockup,dimensions,colormap,norm_alpha,scale_bar_pixels,save_to_drive=False,save_path='null'):
   '''
   Input: A colormap name, a normalization alpha parameter, a boolean instructing whether to save to drive, and a savepath to export the image
   Output: THE IMAGE
@@ -447,9 +440,13 @@ def plot_mockup(colormap,norm_alpha,dimensions,save_to_drive=False,save_path='nu
   fig.tight_layout(pad=-3.05)
   plt.ioff()
 
+  # Define a dictionary of general image sizes
   im_size = {'VLT':1024,'GEMINI':281,'SUBARU':512}
+  # Define two empty dictionaries
   spec_im_dict = {}
   crop_pix = {}
+  # Define a dictionary keying each mockup image to its telescope
+  telescopes = calc_telescopes(mockup)
   for i in range(len(mockup['names'])):
     # Exception for WRAY15788 - Special dimensions write "FORCE:total_width:crop_radius"
     if 'FORCE' in mockup['crop'][i]:
@@ -563,5 +560,3 @@ def plot_mockup(colormap,norm_alpha,dimensions,save_to_drive=False,save_path='nu
   if save_to_drive:
     plt.savefig(save_path+'/'+'Mockup '+str(mockup['number'])+' - CMap: '+colormap+' - Alpha: '+str(norm_alpha)+'.png',bbox_inches="tight",facecolor='black')
     plt.close(fig)
-
-
